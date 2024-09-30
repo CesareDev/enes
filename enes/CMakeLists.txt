@@ -2,6 +2,7 @@ project(enes)
 
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cpu.c
 )
 
 # set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dep/include)
