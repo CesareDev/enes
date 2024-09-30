@@ -6,10 +6,15 @@
 typedef struct {
     uint8_t register_a;
     uint8_t register_x;
+    uint8_t register_y;
     uint8_t status;
     uint16_t program_counter;
+    uint8_t memory[0xFFFF];
 } CPU;
 
-void cpu_interpret(CPU* cpu, uint8_t* program);
+void load(CPU* cpu, uint8_t* program, uint16_t size);
+void run(CPU* cpu);
+void reset(CPU* cpu);
+void load_and_run(CPU* cpu, uint8_t* program, uint16_t size);
 
 #endif // !CPU_H
