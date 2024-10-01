@@ -7,6 +7,7 @@ enum AddressingMode {
     Immediate,
     ZeroPage,
     ZeroPage_X,
+    ZeroPage_Y,
     Absolute,
     Absolute_X,
     Absolute_Y,
@@ -24,5 +25,7 @@ typedef struct {
 } OpCode;
 
 extern OpCode cpu_op_codes[18];
+
+OpCode opcode_to_index(uint8_t);
 
 #endif // !OP_CODE_H

@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#include <stdio.h>
+
 void update_zero_and_negative_flags(CPU* cpu, uint8_t result) {
     if (result == 0) {
         cpu->status = cpu->status | 0b00000010;
@@ -91,6 +93,11 @@ void lda(CPU* cpu, enum AddressingMode mode) {
     update_zero_and_negative_flags(cpu, cpu->register_a);
 }
 
+void sta(CPU* cpu, enum AddressingMode mode) {
+    uint16_t addr = get_operand_address(cpu, mode);
+    mem_write(cpu, addr, cpu->register_a);
+}
+
 void tax(CPU* cpu) {
     cpu->register_x = cpu->register_a;
     update_zero_and_negative_flags(cpu, cpu->register_x);
@@ -101,87 +108,63 @@ void inx(CPU* cpu) {
     update_zero_and_negative_flags(cpu, cpu->register_x);
 }
 
-void sta(CPU* cpu, enum AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    mem_write(cpu, addr, cpu->register_a);
-}
-
 void load(CPU *cpu, uint8_t *program, uint16_t size) {
-    for (uint16_t i = 0x8000; i < 0xFFFF && i < size; i++) {
+    for (uint16_t i = 0x8000; i < 0xFFFF && (i - 0x8000) < size; i++) {
         cpu->memory[i] = program[i - 0x8000];
     }
-    cpu->program_counter = 0x8000;
+    mem_write_uint16(cpu, 0xFFFC, 0x8000);
 }
 
 void run(CPU *cpu) {
     while (1)
     {
-        uint8_t op_code = mem_read(cpu, cpu->program_counter);
+        // FETCH
+        
+        uint8_t code = mem_read(cpu, cpu->program_counter);
         cpu->program_counter += 1;
+        uint16_t program_counter_state = cpu->program_counter;
+        OpCode op_code = opcode_to_index(code);
 
-        switch (op_code) {
-            // LDA
-            case 0xA9: {
-                lda(cpu, Immediate);
-                cpu->program_counter += 1;
-            }
-            case 0xA5: {
-                lda(cpu, ZeroPage);
-                cpu->program_counter += 1;
-            }
-            case 0xAD: {
-                lda(cpu, Absolute);
-                cpu->program_counter += 2;
-            }
-            case 0xBD: {
-                lda(cpu, Absolute_X);
-                cpu->program_counter += 2;
-            }
-            case 0xB9: {
-                lda(cpu, Absolute_Y);
-                cpu->program_counter += 2;
-            }
-            case 0xA1: {
-                lda(cpu, Indirect_X);
-                cpu->program_counter += 1;
-            }
+        // EXECUTE
+
+        switch (code) {
+            case 0xA9:
+            case 0xA5:
+            case 0xB5:
+            case 0xAD:
+            case 0xBD:
+            case 0xB9:
+            case 0xA1:
             case 0xB1: {
-                lda(cpu, Indirect_Y);
-                cpu->program_counter += 1;
+                lda(cpu, op_code.mode);
+                break;
             }
-            // STA
-            case 0x85: {
-                sta(cpu, Immediate);
-                cpu->program_counter += 1;
+
+            case 0x85:
+            case 0x95:
+            case 0x8D:
+            case 0x9D:
+            case 0x99:
+            case 0x81:
+            case 0x91: { 
+                sta(cpu, op_code.mode);
+                break;
             }
-            case 0x95: {
-                lda(cpu, ZeroPage);
-                cpu->program_counter += 1;
+
+            case 0xAA: {
+                tax(cpu);
+                break;
             }
-            case 0x8D: {
-                lda(cpu, Absolute);
-                cpu->program_counter += 2;
+            case 0xE8:{
+                inx(cpu);
+                break;
             }
-            case 0x9D: {
-                lda(cpu, Absolute_X);
-                cpu->program_counter += 2;
-            }
-            case 0x99: {
-                lda(cpu, Absolute_Y);
-                cpu->program_counter += 2;
-            }
-            case 0x81: {
-                lda(cpu, Indirect_X);
-                cpu->program_counter += 1;
-            }
-            case 0x91: {
-                lda(cpu, Indirect_Y);
-                cpu->program_counter += 1;
-            }
-            case 0xAA: tax(cpu);
-            case 0xe8: inx(cpu);
             case 0x00: return;
         }
+        
+        if (program_counter_state == cpu->program_counter) {
+            cpu->program_counter += (uint16_t)(op_code.len - 1);
+        } 
     }
 }
 
