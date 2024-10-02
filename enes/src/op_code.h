@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define OP_COUNT 151
+
 enum AddressingMode {
     Immediate,
     ZeroPage,
@@ -24,8 +26,7 @@ typedef struct {
     enum AddressingMode mode;
 } OpCode;
 
-extern OpCode cpu_op_codes[18];
-
-OpCode opcode_to_index(uint8_t);
+void populate_op_index();
+OpCode opcode_to_index(uint8_t code);
 
 #endif // !OP_CODE_H
