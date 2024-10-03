@@ -1,6 +1,4 @@
 #include <raylib.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 #include "cpu.h"
@@ -67,7 +65,7 @@ int main(int argc, char* argv[]) {
 
     CPU cpu;
     Bus bus;
-    RomResult result = load_rom("/home/cesare/nesroms/snake.nes");
+    RomResult result = load_rom("snake.nes");
 
     if (!result.valid) {
         CloseWindow();

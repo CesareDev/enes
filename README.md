@@ -5,6 +5,9 @@ NES emulator project written in C following this [guide](https://bugzmanov.githu
 ## Requirements
 
 - `cmake`
+- `raylib`
+    - In the project there are already the compiled version of the library under `enes/dep/`
+    - For now there are no roms available
 
 ## Installation
 
@@ -18,3 +21,7 @@ Navigate into the `enes` folder and run `make`
     - `cd enes && make`
 Run the executable
     - `./enes`
+
+## Mention
+
+- [raylib](https://github.com/raysan5/raylib)
