@@ -11,15 +11,15 @@ NES emulator project written in C following this [guide](https://bugzmanov.githu
 
 ## Installation
 
-Clone the reposistory 
+- Clone the reposistory 
     - `git clone https://github.com/CesareDev/enes.git`
-Launch the script file to generate the `Makefile`
+- Launch the script file to generate the `Makefile`
     - `cd enes && ./generate.sh`
-Go into the generated `build` directory then go into one of the two target directory `debug` or `release`
+- Go into the generated `build` directory then go into one of the two target directory `debug` or `release`
     - `cd build/release`
-Navigate into the `enes` folder and run `make`
+- Navigate into the `enes` folder and run `make`
     - `cd enes && make`
-Run the executable
+- Run the executable
     - `./enes`
 
 ## Mention
