@@ -4,8 +4,9 @@
 #include <stdint.h>
 
 #define OP_COUNT 151
+#define OP_MAX_COUNT 0xff
 
-enum AddressingMode {
+typedef enum {
     Immediate,
     ZeroPage,
     ZeroPage_X,
@@ -16,14 +17,14 @@ enum AddressingMode {
     Indirect_X,
     Indirect_Y,
     NoneAddressing
-};
+} AddressingMode;
 
 typedef struct {
     uint8_t code;
     char mnemonic[3];
     uint8_t len;
     uint8_t cycles;
-    enum AddressingMode mode;
+    AddressingMode mode;
 } OpCode;
 
 void populate_op_index();

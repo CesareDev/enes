@@ -2,6 +2,9 @@
 #define CPU_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#include "bus.h"
 
 #define STACK 0x0100
 #define STACK_RESET 0xfd
@@ -15,7 +18,9 @@ typedef enum {
     BREAK2            = 0b00100000,
     OVERFLOW          = 0b01000000,
     NEGATIV          = 0b10000000
-} CpuFlag;
+} Flag;
+
+typedef uint8_t CpuFlag;
 
 typedef struct {
     uint8_t register_a;
@@ -24,12 +29,17 @@ typedef struct {
     CpuFlag status;
     uint16_t program_counter;
     uint8_t stack_pointer;
-    uint8_t memory[0xffff];
+    Bus* bus;
 } CPU;
 
+void mem_write(CPU* cpu, uint16_t addr, uint8_t data);
+uint8_t mem_read(CPU* cpu, uint16_t addr);
+
+void init_cpu(CPU* cpu, Bus* bus, Rom* rom);
+
 void load(CPU* cpu, uint8_t* program, uint16_t size);
-void run(CPU* cpu);
+bool cycle(CPU* cpu);
 void reset(CPU* cpu);
-void load_and_run(CPU* cpu, uint8_t* program, uint16_t size);
+void load_and_reset(CPU* cpu, uint8_t* program, uint16_t size);
 
 #endif // !CPU_H
