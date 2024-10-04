@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
     CPU cpu;
     Bus bus;
-    RomResult result = load_rom("snake.nes");
+    RomResult result = load_rom("../../../enes/res/snake.nes");
 
     if (!result.valid) {
         CloseWindow();

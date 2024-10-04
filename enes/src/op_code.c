@@ -1,7 +1,7 @@
 #include "op_code.h"
 #include <stdlib.h>
 
-static OpCode cpu_op_codes[OP_COUNT] = {
+static OpCode cpu_op_codes[OP_MAX_COUNT] = {
     (OpCode){ 0x00, "BRK", 1, 7, NoneAddressing },
     (OpCode){ 0xea, "NOP", 1, 2, NoneAddressing },
     (OpCode){ 0x69, "ADC", 2, 2, Immediate },
@@ -153,6 +153,115 @@ static OpCode cpu_op_codes[OP_COUNT] = {
     (OpCode){ 0x68, "PLA", 1, 4, NoneAddressing },
     (OpCode){ 0x08, "PHP", 1, 3, NoneAddressing },
     (OpCode){ 0x28, "PLP", 1, 4, NoneAddressing },
+    // extra (unofficial)
+    (OpCode){ 0xc7, "*DCP", 2, 5, ZeroPage },
+    (OpCode){ 0xd7, "*DCP", 2, 6, ZeroPage_X },
+    (OpCode){ 0xCF, "*DCP", 3, 6, Absolute },
+    (OpCode){ 0xdF, "*DCP", 3, 7, Absolute_X },
+    (OpCode){ 0xdb, "*DCP", 3, 7, Absolute_Y },
+    (OpCode){ 0xd3, "*DCP", 2, 8, Indirect_Y },
+    (OpCode){ 0xc3, "*DCP", 2, 8, Indirect_X },
+    (OpCode){ 0x27, "*RLA", 2, 5, ZeroPage },
+    (OpCode){ 0x37, "*RLA", 2, 6, ZeroPage_X },
+    (OpCode){ 0x2F, "*RLA", 3, 6, Absolute },
+    (OpCode){ 0x3F, "*RLA", 3, 7, Absolute_X },
+    (OpCode){ 0x3b, "*RLA", 3, 7, Absolute_Y },
+    (OpCode){ 0x33, "*RLA", 2, 8, Indirect_Y },
+    (OpCode){ 0x23, "*RLA", 2, 8, Indirect_X },
+    (OpCode){ 0x07, "*SLO", 2, 5, ZeroPage },
+    (OpCode){ 0x17, "*SLO", 2, 6, ZeroPage_X },
+    (OpCode){ 0x0F, "*SLO", 3, 6, Absolute },
+    (OpCode){ 0x1f, "*SLO", 3, 7, Absolute_X },
+    (OpCode){ 0x1b, "*SLO", 3, 7, Absolute_Y },
+    (OpCode){ 0x03, "*SLO", 2, 8, Indirect_X },
+    (OpCode){ 0x13, "*SLO", 2, 8, Indirect_Y },
+    (OpCode){ 0x47, "*SRE", 2, 5, ZeroPage },
+    (OpCode){ 0x57, "*SRE", 2, 6, ZeroPage_X },
+    (OpCode){ 0x4F, "*SRE", 3, 6, Absolute },
+    (OpCode){ 0x5f, "*SRE", 3, 7, Absolute_X },
+    (OpCode){ 0x5b, "*SRE", 3, 7, Absolute_Y },
+    (OpCode){ 0x43, "*SRE", 2, 8, Indirect_X },
+    (OpCode){ 0x53, "*SRE", 2, 8, Indirect_Y },
+    (OpCode){ 0x80, "*NOP", 2,2, Immediate },
+    (OpCode){ 0x82, "*NOP", 2,2, Immediate },
+    (OpCode){ 0x89, "*NOP", 2,2, Immediate },
+    (OpCode){ 0xc2, "*NOP", 2,2, Immediate },
+    (OpCode){ 0xe2, "*NOP", 2,2, Immediate },
+    (OpCode){ 0xCB, "*AXS", 2,2, Immediate },
+    (OpCode){ 0x6B, "*ARR", 2,2, Immediate },
+    (OpCode){ 0xeb, "*SBC", 2,2, Immediate },
+    (OpCode){ 0x0b, "*ANC", 2,2, Immediate },
+    (OpCode){ 0x2b, "*ANC", 2,2, Immediate },
+    (OpCode){ 0x4b, "*ALR", 2,2, Immediate },
+    // OpCode::new(0xCB, "IGN", 3,4 /* or 5*/, AddressingMode::Absolute_X),
+    (OpCode){ 0x04, "*NOP", 2,3, ZeroPage },
+    (OpCode){ 0x44, "*NOP", 2,3, ZeroPage },
+    (OpCode){ 0x64, "*NOP", 2,3, ZeroPage },
+    (OpCode){ 0x14, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0x34, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0x54, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0x74, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0xd4, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0xf4, "*NOP", 2, 4, ZeroPage_X },
+    (OpCode){ 0x0c, "*NOP", 3, 4, Absolute },
+    (OpCode){ 0x1c, "*NOP", 3, 4 /*or 5*/, Absolute_X },
+    (OpCode){ 0x3c, "*NOP", 3, 4 /*or 5*/, Absolute_X },
+    (OpCode){ 0x5c, "*NOP", 3, 4 /*or 5*/, Absolute_X },
+    (OpCode){ 0x7c, "*NOP", 3, 4 /*or 5*/, Absolute_X },
+    (OpCode){ 0xdc, "*NOP", 3, 4 /* or 5*/, Absolute_X },
+    (OpCode){ 0xfc, "*NOP", 3, 4 /* or 5*/, Absolute_X },
+    (OpCode){ 0x67, "*RRA", 2, 5, ZeroPage },
+    (OpCode){ 0x77, "*RRA", 2, 6, ZeroPage_X },
+    (OpCode){ 0x6f, "*RRA", 3, 6, Absolute },
+    (OpCode){ 0x7f, "*RRA", 3, 7, Absolute_X },
+    (OpCode){ 0x7b, "*RRA", 3, 7, Absolute_Y },
+    (OpCode){ 0x63, "*RRA", 2, 8, Indirect_X },
+    (OpCode){ 0x73, "*RRA", 2, 8, Indirect_Y },
+    (OpCode){ 0xe7, "*ISB", 2,5, ZeroPage },
+    (OpCode){ 0xf7, "*ISB", 2,6, ZeroPage_X },
+    (OpCode){ 0xef, "*ISB", 3,6, Absolute },
+    (OpCode){ 0xff, "*ISB", 3,7, Absolute_X },
+    (OpCode){ 0xfb, "*ISB", 3,7, Absolute_Y },
+    (OpCode){ 0xe3, "*ISB", 2,8, Indirect_X },
+    (OpCode){ 0xf3, "*ISB", 2,8, Indirect_Y },
+    (OpCode){ 0x02, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x12, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x22, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x32, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x42, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x52, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x62, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x72, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x92, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0xb2, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0xd2, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0xf2, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x1a, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x3a, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x5a, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0x7a, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0xda, "*NOP", 1,2, NoneAddressing },
+    // OpCode::new(0xea, "NOP", 1,2, AddressingMode::NoneAddressing),
+    (OpCode){ 0xfa, "*NOP", 1,2, NoneAddressing },
+    (OpCode){ 0xab, "*LXA", 2, 3, Immediate }, //todo: highly unstable and not used
+    //http://visual6502.org/wiki/index.php?title=6502_Opcode_8B_%28XAA,_ANE%29
+    (OpCode){ 0x8b, "*XAA", 2, 3, Immediate }, //todo: highly unstable and not used
+    (OpCode){ 0xbb, "*LAS", 3, 2, Absolute_Y }, //todo: highly unstable and not used
+    (OpCode){ 0x9b, "*TAS", 3, 2, Absolute_Y }, //todo: highly unstable and not used
+    (OpCode){ 0x93, "*AHX", 2, /* guess */ 8, Indirect_Y }, //todo: highly unstable and not used
+    (OpCode){ 0x9f, "*AHX", 3, /* guess */ 4/* or 5*/, Absolute_Y }, //todo: highly unstable and not used
+    (OpCode){ 0x9e, "*SHX", 3, /* guess */ 4/* or 5*/, Absolute_Y }, //todo: highly unstable and not used
+    (OpCode){ 0x9c, "*SHY", 3, /* guess */ 4/* or 5*/, Absolute_X }, //todo: highly unstable and not used
+    (OpCode){ 0xa7, "*LAX", 2, 3, ZeroPage },
+    (OpCode){ 0xb7, "*LAX", 2, 4, ZeroPage_Y },
+    (OpCode){ 0xaf, "*LAX", 3, 4, Absolute },
+    (OpCode){ 0xbf, "*LAX", 3, 4, Absolute_Y },
+    (OpCode){ 0xa3, "*LAX", 2, 6, Indirect_X },
+    (OpCode){ 0xb3, "*LAX", 2, 5, Indirect_Y },
+    (OpCode){ 0x87, "*SAX", 2, 3, ZeroPage },
+    (OpCode){ 0x97, "*SAX", 2, 4, ZeroPage_Y },
+    (OpCode){ 0x8f, "*SAX", 3, 4, Absolute },
+    (OpCode){ 0x83, "*SAX", 2, 6, Indirect_X }
 };
 
 static OpCode* op_to_index[OP_MAX_COUNT];
@@ -161,7 +270,7 @@ void populate_op_index() {
     for (int i = 0; i < OP_MAX_COUNT; i++) {
         op_to_index[i] = 0;
     }
-    for (int i = 0; i < OP_COUNT; i++) {
+    for (int i = 0; i < OP_MAX_COUNT; i++) {
         op_to_index[cpu_op_codes[i].code] = &cpu_op_codes[i];
     }
 }

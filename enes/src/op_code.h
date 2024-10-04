@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-#define OP_COUNT 151
-#define OP_MAX_COUNT 0xff
+#define OP_MAX_COUNT 256
 
 typedef enum {
     Immediate,
@@ -21,7 +20,7 @@ typedef enum {
 
 typedef struct {
     uint8_t code;
-    char mnemonic[3];
+    const char* mnemonic;
     uint8_t len;
     uint8_t cycles;
     AddressingMode mode;
