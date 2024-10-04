@@ -17,7 +17,7 @@ typedef enum {
     BREAK             = 0b00010000,
     BREAK2            = 0b00100000,
     OVERFLOW          = 0b01000000,
-    NEGATIV          = 0b10000000
+    NEGATIV           = 0b10000000
 } Flag;
 
 typedef uint8_t CpuFlag;
@@ -35,7 +35,7 @@ typedef struct {
 void mem_write(CPU* cpu, uint16_t addr, uint8_t data);
 uint8_t mem_read(CPU* cpu, uint16_t addr);
 
-void init_cpu(CPU* cpu, Bus* bus, Rom* rom);
+void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom);
 
 void load(CPU* cpu, uint8_t* program, uint16_t size);
 bool cycle(CPU* cpu);

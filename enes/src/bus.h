@@ -1,8 +1,10 @@
 #ifndef BUS_H
 #define BUS_H
 
-#include "cartridge.h"
 #include <stdint.h>
+
+#include "cartridge.h"
+#include "ppu.h"
 
 #define CPU_VRAM 2048
 #define RAM 0x0000 
@@ -13,9 +15,10 @@
 typedef struct {
     uint8_t cpu_vram[CPU_VRAM];
     Rom* rom;
+    PPU* ppu;
 } Bus;
 
-void init_vram(Bus* bus);
+void init_bus(Bus* bus, PPU* ppu, Rom* rom);
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr);
 void bus_mem_write(Bus* bus, uint16_t addr, uint8_t data);

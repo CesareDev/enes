@@ -1,19 +1,26 @@
 #include "bus.h"
 #include <stdlib.h>
 
-void init_vram(Bus* bus) {
+void init_bus(Bus* bus, PPU* ppu, Rom* rom) {
     for (uint16_t i = 0; i < CPU_VRAM; i++) {
         bus->cpu_vram[i] = 0;
     }
+    init_ppu(ppu, rom->chr_rom, rom->screen_mirroring);
+    bus->ppu = ppu;
+    bus->rom = rom;
 }
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr) {
     if (addr >= RAM && addr <= RAM_MIRRORS_END) {
         uint16_t mirror_down_address = addr & 0b0000011111111111;
         return bus->cpu_vram[mirror_down_address];
-    } else if (addr >= PPU_REGISTERS && addr <= PPU_REGISTERS_MIRRORS_END) {
-        uint16_t mirror_down_address = addr & 0b0010000000000111;
+    } else if (addr == 0x2000 || addr == 0x2001 || addr == 0x2003 || addr == 0x2005 || addr == 0x2006 || addr == 0x4014) {
         abort();
+    } else if (addr == 0x2007) {
+        return read_data(bus->ppu);
+    } else if (addr >= 0x2008 && addr <= PPU_REGISTERS_MIRRORS_END) {
+        uint16_t mirror_down_address = addr & 0b0010000000000111;
+        bus_mem_read(bus, mirror_down_address);
     } else if (addr >= 0x8000 && addr <= 0xffff) {
         return read_prg_rom(bus, addr);
     }
@@ -21,18 +28,20 @@ uint8_t bus_mem_read(Bus* bus, uint16_t addr) {
 }
 
 void bus_mem_write(Bus* bus, uint16_t addr, uint8_t data) {
-    switch (addr) {
-        case RAM ... RAM_MIRRORS_END: {
-            uint16_t mirror_down_address = addr & 0b0000011111111111;
-            bus->cpu_vram[mirror_down_address] = data;
-            break;
-        }
-        case PPU_REGISTERS ... PPU_REGISTERS_MIRRORS_END: {
-            uint16_t mirror_down_address = addr & 0b0010000000000111;
-            abort();
-        }
-        case 0x8000 ... 0xffff: abort();
-        default: break;
+    if (addr >= RAM && addr <= RAM_MIRRORS_END) {
+        uint16_t mirror_down_address = addr & 0b0000011111111111;
+        bus->cpu_vram[mirror_down_address] = data;
+    } else if (addr == 0x2000) {
+        write_to_ctrl(bus->ppu, data);
+    } else if (addr == 0x2006) {
+        write_to_ppu_addr(bus->ppu, data);
+    } else if (addr == 0x2007) {
+        //TODO
+    } else if (addr >= 0x2008 && addr <= PPU_REGISTERS_MIRRORS_END) {
+        uint16_t mirror_down_address = addr & 0b0010000000000111;
+        bus_mem_read(bus, mirror_down_address);
+    } else if (addr >= 0x8000 && addr <= 0xffff) {
+        abort();
     }
 }
 

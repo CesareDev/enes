@@ -180,17 +180,16 @@ void load_and_reset(CPU *cpu, uint8_t *program, uint16_t size) {
     reset(cpu);
 }
 
-void init_cpu(CPU* cpu, Bus* bus, Rom* rom) {
+void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom) {
     cpu->bus = bus;
-    bus->rom = rom;
     populate_op_index();
-    init_vram(bus);
+    init_bus(bus, ppu, rom);
     reset(cpu);
 }
 
 void load(CPU *cpu, uint8_t *program, uint16_t size) {
     populate_op_index();
-    init_vram(cpu->bus);
+    //init_bus(cpu->bus, );
     for (uint16_t i = 0; i < size; i++) {
         mem_write(cpu, 0x0600 + i, program[i]);
     }

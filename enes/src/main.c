@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
 
     CPU cpu;
     Bus bus;
+    PPU ppu;
     RomResult result = load_rom("../../../enes/res/snake.nes");
 
     if (!result.valid) {
@@ -72,13 +73,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    init_cpu(&cpu, &bus, &result.rom);
+    init(&cpu, &ppu, &bus, &result.rom);
 
     uint8_t screen[32 * 32 * 3] = { 0 };
-
     Image image = GenImageColor(32, 32, BLACK);
     ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-
     Texture2D texture_id;
     texture_id = LoadTextureFromImage(image);
 
