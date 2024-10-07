@@ -3,24 +3,26 @@
 
 #include <stdlib.h>
 
+Interrupt Nmi = { NMI, 0xfffa, 0b00100000, 2 };
+
 void insert(CpuFlag* status, Flag flag) {
-    *status = *status | flag;
+    *(status) = *(status) | flag;
 }
 
 void remove(CpuFlag* status, Flag flag) {
-    *status = *status & (~flag);
+    *(status) = *(status) & (~flag);
 }
 
 void set(CpuFlag* status, Flag flag, bool condition) {
     if (condition) {
-        *status = *status | flag;
+        *(status) = *(status) | flag;
     } else {
-        *status = *status & ~flag;
+        *(status) = *(status) & ~(flag);
     }
 }
 
 bool contains(CpuFlag status, Flag flag) {
-    return (status & flag) > 0; 
+    return status & flag; 
 }
 
 void update_zero_and_negative_flags(CPU* cpu, uint8_t result) {
@@ -484,7 +486,24 @@ void branch(CPU* cpu, bool condition) {
     }
 }
 
+void interrupt(CPU* cpu, Interrupt interrupt) {
+    stack_push_u16(cpu, cpu->program_counter);
+    CpuFlag flag = cpu->status;
+    set(&flag, BREAK, (interrupt.b_flag_mask & 0b010000) == 1);
+    set(&flag, BREAK2, (interrupt.b_flag_mask & 0b010000) == 1);
+    stack_push(cpu, flag);
+    insert(&cpu->status, INTERRUPT_DISABLE);
+    bus_tick(cpu->bus, interrupt.cpu_cycles);
+    cpu->program_counter = mem_read_uint16(cpu, interrupt.vector_addr);
+}
+
 bool cycle(CPU *cpu) {
+
+    NmiInterrupt nmi = poll_nmi_status(cpu->bus);
+    if (nmi.is_valid) {
+        interrupt(cpu, Nmi);
+    }
+
     // FETCH
     uint8_t code = mem_read(cpu, cpu->program_counter);
     cpu->program_counter += 1;
@@ -1037,6 +1056,8 @@ bool cycle(CPU *cpu) {
             break;
         }
     }
+
+    bus_tick(cpu->bus, op_code.cycles);
 
     if (program_counter_state == cpu->program_counter) {
         cpu->program_counter += (uint16_t)(op_code.len - 1);

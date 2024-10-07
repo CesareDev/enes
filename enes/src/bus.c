@@ -8,6 +8,16 @@ void init_bus(Bus* bus, PPU* ppu, Rom* rom) {
     init_ppu(ppu, rom->chr_rom, rom->screen_mirroring);
     bus->ppu = ppu;
     bus->rom = rom;
+    bus->cycles = 0;
+}
+
+void bus_tick(Bus* bus, uint8_t cycles) {
+    bus->cycles += (uint64_t)cycles;
+    ppu_tick(bus->ppu, cycles * 3);
+}
+
+NmiInterrupt poll_nmi_status(Bus* bus) {
+    return poll_nmi_interrupt(bus->ppu);
 }
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr) {

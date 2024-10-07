@@ -1,97 +1,106 @@
 #include <raylib.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "cpu.h"
+#include "render/frame.h"
+#include "render/palette.h"
 
-void handle_input(CPU* cpu) {
-    if (IsKeyDown(KEY_W)) {
-        mem_write(cpu, 0xff, 0x77);
-    }
-    if (IsKeyDown(KEY_S)) {
-        mem_write(cpu, 0xff, 0x73);
-    }
-    if (IsKeyDown(KEY_A)) {
-        mem_write(cpu, 0xff, 0x61);
-    }
-    if (IsKeyDown(KEY_D)) {
-        mem_write(cpu, 0xff, 0x64);
-    }
-}
-
-Color color(uint8_t byte) {
-    switch (byte) {
-        case 0: return BLACK;
-        case 1: return WHITE; 
-        case 2:
-        case 9: return LIGHTGRAY;
-        case 3:
-        case 10: return RED;
-        case 4:
-        case 11: return GREEN;
-        case 5:
-        case 12: return BLUE;
-        case 6:
-        case 13: return MAGENTA;
-        case 7:
-        case 14: return YELLOW;
-        default: return PINK;
-    }
-}
-
-bool read_screen_state(CPU* cpu, uint8_t* frame) {
-    uint64_t frame_idx = 0;
-    bool update = false;
-    for (uint16_t i = 0x0200; i < 0x0600; i++) {
-        uint8_t color_idx = mem_read(cpu, i);
-        Color c = color(color_idx);
-        uint8_t b1 = c.r;
-        uint8_t b2 = c.g;
-        uint8_t b3 = c.b;
-        if (frame[frame_idx] != b1 || frame[frame_idx + 1] != b2 || frame[frame_idx + 2] != b3) {
-            frame[frame_idx] = b1;
-            frame[frame_idx + 1] = b2;
-            frame[frame_idx + 2] = b3;
-            update = true;
+void show_tile(Frame* frame, uint8_t* chr_rom, uint64_t bank, uint64_t tile_n) {
+    if (bank > 1) abort();
+    init_frame(frame);
+    uint64_t v_bank = (uint64_t)(bank * 0x1000);
+    uint8_t* tile = &chr_rom[(v_bank + tile_n * 16)];
+    for (uint8_t y = 0; y < 8; y++) {
+        uint8_t upper = tile[y];
+        uint8_t lower = tile[y + 8];
+        for (int8_t x = 7; x >= 0; x--) {
+            uint8_t value = (1 & upper) << 1 | (1 & lower);
+            upper = upper >> 1;
+            lower = lower >> 1;
+            Vec3 rgb;
+            switch (value) {
+                case 0: rgb = SYSTEM_PALETTE[0x01]; break;
+                case 1: rgb = SYSTEM_PALETTE[0x23]; break;
+                case 2: rgb = SYSTEM_PALETTE[0x27]; break;
+                case 3: rgb = SYSTEM_PALETTE[0x30]; break;
+                default: abort();
+            }
+            set_pixel(frame, x, y, rgb);
         }
-        frame_idx += 3;
     }
-    return update;
+}
+
+void show_tile_bank(Frame* frame, uint8_t* chr_rom, uint64_t bank) {
+    if (bank > 1) abort();
+    init_frame(frame);
+    uint32_t tile_y = 0;
+    uint32_t tile_x = 0;
+    uint64_t v_bank = (uint64_t)(bank * 0x1000);
+    for (uint8_t tile_n = 0; tile_n < 255; tile_n++) {
+        if (tile_n != 0 && tile_n % 20 == 0) {
+            tile_y += 10;
+            tile_x = 0;
+        }
+        uint8_t* tile = &chr_rom[(v_bank + tile_n * 16)];
+        for (uint8_t y = 0; y < 8; y++) {
+            uint8_t upper = tile[y];
+            uint8_t lower = tile[y + 8];
+            for (int8_t x = 7; x >= 0; x--) {
+                uint8_t value = (1 & upper) << 1 | (1 & lower);
+                upper = upper >> 1;
+                lower = lower >> 1;
+                Vec3 rgb;
+                switch (value) {
+                    case 0: rgb = SYSTEM_PALETTE[0x01]; break;
+                    case 1: rgb = SYSTEM_PALETTE[0x23]; break;
+                    case 2: rgb = SYSTEM_PALETTE[0x27]; break;
+                    case 3: rgb = SYSTEM_PALETTE[0x30]; break;
+                    default: abort();
+                }
+                set_pixel(frame, tile_x + x, tile_y + y, rgb);
+            }
+        }
+        tile_x += 10;
+    }
 }
 
 int main(int argc, char* argv[]) {
 
-    InitWindow(320, 320, "Snake");
-    SetRandomSeed(0);
+    InitWindow(256 * 3, 240 * 3, "Snake");
+    SetTargetFPS(60);
 
     CPU cpu;
     Bus bus;
     PPU ppu;
-    RomResult result = load_rom("../../../enes/res/snake.nes");
+    RomResult result = load_rom("../../../enes/res/pacman.nes");
 
     if (!result.valid) {
         CloseWindow();
         return 0;
     }
 
-    init(&cpu, &ppu, &bus, &result.rom);
+    //init(&cpu, &ppu, &bus, &result.rom);
 
-    uint8_t screen[32 * 32 * 3] = { 0 };
-    Image image = GenImageColor(32, 32, BLACK);
+    Frame frame;
+    show_tile_bank(&frame, result.rom.chr_rom, 1);
+
+    Image image = GenImageColor(256, 240, BLACK);
     ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-    Texture2D texture_id;
-    texture_id = LoadTextureFromImage(image);
+    Texture2D texture_id = LoadTextureFromImage(image);
+    UpdateTexture(texture_id, frame.data);
 
-    while (!WindowShouldClose() && cycle(&cpu)) { 
-        handle_input(&cpu);
-        uint8_t rand = GetRandomValue(1, 16);
-        mem_write(&cpu, 0xfe, rand);
-        if (read_screen_state(&cpu, screen)) {
-            UpdateTexture(texture_id, screen);
-        }
+    while (!WindowShouldClose()) {
         BeginDrawing();
-        DrawTexturePro(texture_id, (Rectangle){0.f, 0.f, 32.f, 32.f}, (Rectangle){ 0.f, 0.f, 320.f, 320.f }, (Vector2){ 0.f, 0.f }, 0.f, WHITE);
+        ClearBackground(RED);
+        DrawTexturePro(
+            texture_id, 
+            (Rectangle){0, 0, 256, 240}, 
+            (Rectangle){0, 0, 256 * 3, 240 * 3}, 
+            (Vector2){ 0.f, 0.f }, 0.f, 
+            WHITE
+        );
         EndDrawing();
-        usleep(70);
     }
 
     UnloadTexture(texture_id);

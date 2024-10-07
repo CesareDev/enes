@@ -10,6 +10,17 @@
 #define STACK_RESET 0xfd
 
 typedef enum {
+    NMI
+} InterruptType;
+
+typedef struct {
+    InterruptType itype;
+    uint16_t vector_addr;
+    uint8_t b_flag_mask;
+    uint8_t cpu_cycles;
+} Interrupt;
+
+typedef enum {
     CARRY             = 0b00000001,
     ZERO              = 0b00000010,
     INTERRUPT_DISABLE = 0b00000100,

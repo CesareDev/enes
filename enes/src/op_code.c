@@ -1,7 +1,7 @@
 #include "op_code.h"
 #include <stdlib.h>
 
-static OpCode cpu_op_codes[OP_MAX_COUNT] = {
+OpCode cpu_op_codes[OP_MAX_COUNT] = {
     (OpCode){ 0x00, "BRK", 1, 7, NoneAddressing },
     (OpCode){ 0xea, "NOP", 1, 2, NoneAddressing },
     (OpCode){ 0x69, "ADC", 2, 2, Immediate },
@@ -264,19 +264,19 @@ static OpCode cpu_op_codes[OP_MAX_COUNT] = {
     (OpCode){ 0x83, "*SAX", 2, 6, Indirect_X }
 };
 
-static OpCode* op_to_index[OP_MAX_COUNT];
+OpCode* op_to_index[OP_MAX_COUNT];
 
 void populate_op_index() {
     for (int i = 0; i < OP_MAX_COUNT; i++) {
         op_to_index[i] = 0;
     }
     for (int i = 0; i < OP_MAX_COUNT; i++) {
-        op_to_index[cpu_op_codes[i].code] = &cpu_op_codes[i];
+        op_to_index[cpu_op_codes[i].code] = &(cpu_op_codes[i]);
     }
 }
 
 OpCode opcode_to_index(uint8_t code)
 {
     if (!op_to_index[code]) abort();
-    return *op_to_index[code];
+    return *(op_to_index[code]);
 }

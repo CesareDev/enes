@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "cartridge.h"
-#include "ppu.h"
+#include "ppu/ppu.h"
 
 #define CPU_VRAM 2048
 #define RAM 0x0000 
@@ -16,9 +16,13 @@ typedef struct {
     uint8_t cpu_vram[CPU_VRAM];
     Rom* rom;
     PPU* ppu;
+
+    uint64_t cycles;
 } Bus;
 
 void init_bus(Bus* bus, PPU* ppu, Rom* rom);
+void bus_tick(Bus* bus, uint8_t cycles);
+NmiInterrupt poll_nmi_status(Bus* bus);
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr);
 void bus_mem_write(Bus* bus, uint16_t addr, uint8_t data);
