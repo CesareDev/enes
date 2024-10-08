@@ -16,6 +16,8 @@
 typedef struct {
     uint8_t* prg_rom;
     uint8_t* chr_rom;
+    uint64_t prg_size;
+    uint64_t chr_size;
     uint8_t mapper;
     Mirroring screen_mirroring;
 } Rom;

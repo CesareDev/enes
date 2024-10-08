@@ -106,7 +106,7 @@ void bus_mem_write_u16(Bus* bus, uint16_t pos, uint16_t data) {
 
 uint8_t read_prg_rom(Bus* bus, uint16_t addr) {
     addr -= 0x8000;
-    if (sizeof(bus->rom->prg_rom) == 0x4000 && addr >= 0x4000) {
+    if (bus->rom->prg_size == 0x4000 && addr >= 0x4000) {
         addr = addr % 0x4000;
     }
     return bus->rom->prg_rom[(uint64_t)addr];

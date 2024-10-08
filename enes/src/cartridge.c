@@ -5,15 +5,15 @@
 #include "cartridge.h"
 
 RomResult load_rom(const char* name) {
-    FILE* game = fopen(name, "r");
+    FILE* game = fopen(name, "rb");
     if (!game) {
         return (RomResult){ false, (Rom){ 0, 0, 0, 0 } };
     }
     fseek(game, 0, SEEK_END);
     uint64_t prog_len = ftell(game);
     rewind(game);
-    uint8_t* raw = (uint8_t*)malloc(prog_len * sizeof(uint8_t));
-    fread(raw, prog_len, 1, game);
+    uint8_t* raw = (uint8_t*)malloc(prog_len);
+    fread(raw, sizeof(uint8_t), prog_len, game);
 
     if (raw[0] != NES_TAG_0 || raw[1] != NES_TAG_1 || raw[2] != NES_TAG_2 || raw[3] != NES_TAG_3) {
         free(raw);
@@ -38,7 +38,7 @@ RomResult load_rom(const char* name) {
     if (!four_screen && !vertical_mirroring) screen_mirroring = HORIZONTAL;
 
     uint64_t prg_rom_size = (uint64_t)raw[4] * PRG_ROM_PAGE_SIZE;
-    uint64_t chr_rom_size = (uint64_t)raw[4] * CHR_ROM_PAGE_SIZE;
+    uint64_t chr_rom_size = (uint64_t)raw[5] * CHR_ROM_PAGE_SIZE;
 
     uint8_t skip_trainer = (raw[6] & 0b100) != 0;
 
@@ -50,9 +50,11 @@ RomResult load_rom(const char* name) {
     res.valid = true;
     res.rom.mapper = mapper;
     res.rom.screen_mirroring = screen_mirroring;
+    res.rom.prg_size = prg_rom_size;
+    res.rom.chr_size = chr_rom_size;
 
     res.rom.prg_rom = (uint8_t*)malloc(prg_rom_size);
-    res.rom.chr_rom = (uint8_t*)malloc(chr_rom_start);
+    res.rom.chr_rom = (uint8_t*)malloc(chr_rom_size);
 
     memcpy(res.rom.prg_rom, raw + prg_rom_start, prg_rom_size);
     memcpy(res.rom.chr_rom, raw + chr_rom_start, chr_rom_size);

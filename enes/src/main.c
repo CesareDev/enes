@@ -68,8 +68,8 @@ void show_tile_bank(Frame* frame, uint8_t* chr_rom, uint64_t bank) {
 
 int main(int argc, char* argv[]) {
 
-    InitWindow(256 * 3, 240 * 3, "Snake");
-    SetTargetFPS(60);
+    InitWindow(256 * 3, 240 * 3, "Pacman");
+    //SetTargetFPS(60);
 
     CPU cpu;
     PPU ppu;

@@ -7,8 +7,8 @@ Palette bg_palette(PPU* ppu, uint64_t tile_column, uint64_t tile_row) {
     uint64_t attr_table_idx = tile_row / 4 * 8 + tile_column / 4;
     uint8_t attr_byte = ppu->v_ram[0x3c0 + attr_table_idx];
     uint8_t palette_idx = 0;
-    uint64_t col = tile_column % 4 / 2;
-    uint64_t row = tile_row % 4 / 2;
+    uint64_t col = (tile_column % 4) / 2;
+    uint64_t row = (tile_row % 4) / 2;
     if (col == 0 && row == 0) {
         palette_idx = attr_byte & 0b11;
     } else if (col == 1 && row == 0) {
