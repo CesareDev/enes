@@ -21,7 +21,7 @@ typedef struct {
 } Bus;
 
 void init_bus(Bus* bus, PPU* ppu, Rom* rom);
-void bus_tick(Bus* bus, uint8_t cycles);
+bool bus_tick(Bus* bus, uint8_t cycles);
 NmiInterrupt poll_nmi_status(Bus* bus);
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr);

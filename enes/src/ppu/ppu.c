@@ -46,11 +46,11 @@ uint8_t read_status(PPU* ppu) {
     return data;
 }
 
-void wirte_to_oam_addr(PPU* ppu, uint8_t value) {
+void write_to_oam_addr(PPU* ppu, uint8_t value) {
     ppu->oam_addr = value;
 }
 
-void wirte_to_oam_data(PPU* ppu, uint8_t value) {
+void write_to_oam_data(PPU* ppu, uint8_t value) {
     ppu->oam_data[ppu->oam_addr] = value;
     ppu->oam_addr++;
 }
@@ -138,7 +138,7 @@ uint16_t mirror_vram_addr(PPU* ppu, uint16_t addr) {
 }
 
 bool ppu_tick(PPU* ppu, uint8_t cycles) {
-    ppu->cycles += cycles;
+    ppu->cycles += (uint64_t)cycles;
     if (ppu->cycles >= 341) {
         ppu->cycles = ppu->cycles - 341;
         ppu->scanline += 1;

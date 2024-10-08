@@ -5,6 +5,15 @@
 
 Interrupt Nmi = { NMI, 0xfffa, 0b00100000, 2 };
 
+typedef struct {
+    uint16_t addr;
+    bool page_cross;
+} AbsAddrRes;
+
+bool page_cross(uint16_t addr1, uint16_t addr2) {
+    return (addr1 & 0xff00) != (addr2 & 0xff00);
+}
+
 void insert(CpuFlag* status, Flag flag) {
     *(status) = *(status) | flag;
 }
@@ -63,36 +72,36 @@ void mem_write_uint16(CPU* cpu, uint16_t pos, uint16_t data) {
     bus_mem_write_u16(cpu->bus, pos, data);
 }
 
-uint16_t get_absolute_address(CPU* cpu, AddressingMode mode, uint16_t addr) {
+AbsAddrRes get_absolute_address(CPU* cpu, AddressingMode mode, uint16_t addr) {
     switch (mode) {
-        case ZeroPage: return (uint16_t)mem_read(cpu, addr);
-        case Absolute: return mem_read_uint16(cpu, addr);
+        case ZeroPage: return (AbsAddrRes){ (uint16_t)mem_read(cpu, addr), false };
+        case Absolute: return (AbsAddrRes){ mem_read_uint16(cpu, addr), false };
         case ZeroPage_X: {
             uint8_t pos = mem_read(cpu, addr);
             uint8_t addr = (uint16_t)(pos + cpu->register_x);
-            return addr;
+            return (AbsAddrRes){ addr, false };
         }
         case ZeroPage_Y: {
             uint8_t pos = mem_read(cpu, addr);
             uint8_t addr = (uint16_t)(pos + cpu->register_y);
-            return addr;
+            return (AbsAddrRes){ addr, false };
         }
         case Absolute_X: {
             uint16_t base = mem_read_uint16(cpu, addr);
             uint16_t addr = base + (uint16_t)cpu->register_x;
-            return addr;
+            return (AbsAddrRes){ addr, page_cross(base, addr) };
         }
         case Absolute_Y: {
             uint16_t base = mem_read_uint16(cpu, addr);
             uint16_t addr = base + (uint16_t)cpu->register_y;
-            return addr;
+            return (AbsAddrRes){ addr, page_cross(base, addr) };
         }
         case Indirect_X: {
             uint8_t base = mem_read(cpu, addr);
             uint8_t ptr = (uint8_t)base + cpu->register_x;
             uint8_t lo = mem_read(cpu, (uint16_t)ptr);
             uint8_t hi = mem_read(cpu, (uint16_t)(ptr + 1));
-            return (uint16_t)hi << 8 | (uint16_t)lo;
+            return (AbsAddrRes){ (uint16_t)hi << 8 | (uint16_t)lo, false };
         }
         case Indirect_Y: {
             uint8_t base = mem_read(cpu, addr);
@@ -100,43 +109,52 @@ uint16_t get_absolute_address(CPU* cpu, AddressingMode mode, uint16_t addr) {
             uint8_t hi = mem_read(cpu, (uint16_t)((uint8_t)base + 1));
             uint16_t deref_base = (uint16_t)hi << 8 | (uint16_t)lo;
             uint16_t deref = deref_base + (uint16_t)cpu->register_y;
-            return deref;
+            return (AbsAddrRes){ deref, page_cross(deref, deref_base) };
         }
         default: abort(); break;
     }
 }
 
-uint16_t get_operand_address(CPU* cpu, AddressingMode mode) {
+AbsAddrRes get_operand_address(CPU* cpu, AddressingMode mode) {
     switch (mode) {
-        case Immediate: return cpu->program_counter; break;
+        case Immediate: return (AbsAddrRes){ cpu->program_counter, false }; break;
         default: return get_absolute_address(cpu, mode, cpu->program_counter); break;
     }
 }
 
 void ldy(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t value = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t value = mem_read(cpu, res.addr);
     cpu->register_y = value;
     update_zero_and_negative_flags(cpu, cpu->register_y);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void ldx(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t value = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t value = mem_read(cpu, res.addr);
     cpu->register_x = value;
     update_zero_and_negative_flags(cpu, cpu->register_x);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void lda(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t value = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t value = mem_read(cpu, res.addr);
     cpu->register_a = value;
     update_zero_and_negative_flags(cpu, cpu->register_a);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void sta(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    mem_write(cpu, addr, cpu->register_a);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    mem_write(cpu, res.addr, cpu->register_a);
 }
 
 void set_register_a(CPU* cpu, uint8_t value) {
@@ -145,21 +163,30 @@ void set_register_a(CPU* cpu, uint8_t value) {
 }
 
 void and(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     set_register_a(cpu, data & cpu->register_a);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void eor(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     set_register_a(cpu, data ^ cpu->register_a);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void ora(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     set_register_a(cpu, data | cpu->register_a);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void tax(CPU* cpu) {
@@ -253,17 +280,23 @@ void or_with_register_a(CPU* cpu, uint8_t data) {
 }
 
 void sbc(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     int8_t tmp_resul = -(data) - 1;
     uint8_t result = (uint8_t)tmp_resul;
     add_to_register_a(cpu, result);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void adc(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t value = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t value = mem_read(cpu, res.addr);
     add_to_register_a(cpu, value);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 uint8_t stack_pop(CPU* cpu) {
@@ -301,15 +334,15 @@ void asl_accumulator(CPU* cpu) {
 }
 
 uint8_t asl(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     if ((data >> 7) == 1) {
         set_carry_flag(cpu);
     } else {
         clear_carry_flag(cpu);
     }
     data = data << 1;
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
@@ -326,22 +359,22 @@ void lsr_accumulator(CPU* cpu) {
 }
 
 uint8_t lsr(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     if ((data & 1) == 1) {
         set_carry_flag(cpu);
     } else {
         clear_carry_flag(cpu);
     }
     data = data >> 1;
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
 
 uint8_t rol(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     bool old_carry = contains(cpu->status, CARRY);
     if ((data >> 7) == 1) {
         set_carry_flag(cpu);
@@ -352,7 +385,7 @@ uint8_t rol(CPU* cpu, AddressingMode mode) {
     if (old_carry) {
         data = data | 1;
     }
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
@@ -373,8 +406,8 @@ void rol_accumulator(CPU* cpu) {
 }
 
 uint8_t ror(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     bool old_carry = contains(cpu->status, CARRY);
     if ((data & 1) == 1) {
         set_carry_flag(cpu);
@@ -385,7 +418,7 @@ uint8_t ror(CPU* cpu, AddressingMode mode) {
     if (old_carry) {
         data = data | 0b10000000;
     }
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
@@ -406,10 +439,10 @@ void ror_accumulator(CPU* cpu) {
 }
 
 uint8_t inc(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     data++;
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
@@ -425,10 +458,10 @@ void dex(CPU* cpu) {
 }
 
 uint8_t dec(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     data--;
-    mem_write(cpu, addr, data);
+    mem_write(cpu, res.addr, data);
     update_zero_and_negative_flags(cpu, data);
     return data;
 }
@@ -452,8 +485,8 @@ void php(CPU* cpu) {
 }
 
 void bit(CPU* cpu, AddressingMode mode) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     uint8_t and = cpu->register_a & data;
     if (and == 0) {
         insert(&cpu->status, ZERO);
@@ -465,8 +498,8 @@ void bit(CPU* cpu, AddressingMode mode) {
 }
 
 void compare(CPU* cpu, AddressingMode mode, uint8_t compare_with) {
-    uint16_t addr = get_operand_address(cpu, mode);
-    uint8_t data = mem_read(cpu, addr);
+    AbsAddrRes res = get_operand_address(cpu, mode);
+    uint8_t data = mem_read(cpu, res.addr);
     if (data <= compare_with) {
         insert(&cpu->status, CARRY);
     } else {
@@ -476,6 +509,9 @@ void compare(CPU* cpu, AddressingMode mode, uint8_t compare_with) {
     set(&cpu->status, OVERFLOW, (data & 0b01000000) > 0);
     uint8_t result = compare_with - data;
     update_zero_and_negative_flags(cpu, result);
+    if (res.page_cross) {
+        bus_tick(cpu->bus, 1);
+    }
 }
 
 void branch(CPU* cpu, bool condition) {
@@ -497,7 +533,9 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
     cpu->program_counter = mem_read_uint16(cpu, interrupt.vector_addr);
 }
 
-bool cycle(CPU *cpu) {
+ CycleRes cycle(CPU *cpu) {
+
+    CycleRes res = { true, false };
 
     NmiInterrupt nmi = poll_nmi_status(cpu->bus);
     if (nmi.is_valid) {
@@ -525,7 +563,7 @@ bool cycle(CPU *cpu) {
 
         case 0xe8: inx(cpu); break;
 
-        case 0x00: return false;
+        case 0x00: res.cycle_is_valid = false; return res;
 
         case 0xd8: remove(&cpu->status, DECIMAL_MODE); break;
         case 0x58: remove(&cpu->status, INTERRUPT_DISABLE); break;
@@ -715,16 +753,16 @@ bool cycle(CPU *cpu) {
         case 0x86:
         case 0x96:
         case 0x8e: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            mem_write(cpu, addr, cpu->register_x);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            mem_write(cpu, res.addr, cpu->register_x);
             break;
         }
 
         case 0x84:
         case 0x94:
         case 0x8c: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            mem_write(cpu, addr, cpu->register_y);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            mem_write(cpu, res.addr, cpu->register_y);
             break;
         }
 
@@ -780,10 +818,10 @@ bool cycle(CPU *cpu) {
         case 0xdb:
         case 0xd3:
         case 0xc3: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             data--;
-            mem_write(cpu, addr, data);
+            mem_write(cpu, res.addr, data);
             if (data <= cpu->register_a) {
                 insert(&cpu->status, CARRY);
             }
@@ -836,8 +874,8 @@ bool cycle(CPU *cpu) {
         }
 
         case 0xcb: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             uint8_t x_and_a = cpu->register_x & cpu->register_a;
             uint8_t result = x_and_a + data;
             if (data <= x_and_a) {
@@ -849,8 +887,8 @@ bool cycle(CPU *cpu) {
         }
 
         case 0x6b: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             and_with_register_a(cpu, data);
             ror_accumulator(cpu);
             uint8_t result = cpu->register_a;
@@ -873,16 +911,16 @@ bool cycle(CPU *cpu) {
         }
 
         case 0xeb: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             sub_from_register_a(cpu, data);
             break;
         }
 
         case 0x0b:
         case 0x2b: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             and_with_register_a(cpu, data);
             if (contains(cpu->status, NEGATIV)) {
                 insert(&cpu->status, CARRY);
@@ -893,8 +931,8 @@ bool cycle(CPU *cpu) {
         }
 
         case 0x4b: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             and_with_register_a(cpu, data);
             lsr_accumulator(cpu);
             break;
@@ -916,8 +954,8 @@ bool cycle(CPU *cpu) {
         case 0x7c:
         case 0xdc:
         case 0xfc: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             break;
         }
 
@@ -975,8 +1013,8 @@ bool cycle(CPU *cpu) {
         case 0xbf:
         case 0xa3:
         case 0xb3: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             set_register_a(cpu, data);
             cpu->register_x = cpu->register_a;
             break;
@@ -987,8 +1025,8 @@ bool cycle(CPU *cpu) {
         case 0x8f:
         case 0x83: {
             uint8_t data = cpu->register_a & cpu->register_x;
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            mem_write(cpu, addr, data);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            mem_write(cpu, res.addr, data);
             break;
         }
 
@@ -1001,15 +1039,15 @@ bool cycle(CPU *cpu) {
         case 0x8b: {
             cpu->register_a = cpu->register_x;
             update_zero_and_negative_flags(cpu, cpu->register_a);
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             and_with_register_a(cpu, data);
             break;
         }
 
         case 0xbb: {
-            uint16_t addr = get_operand_address(cpu, op_code.mode);
-            uint8_t data = mem_read(cpu, addr);
+            AbsAddrRes res = get_operand_address(cpu, op_code.mode);
+            uint8_t data = mem_read(cpu, res.addr);
             data = data & cpu->stack_pointer;
             cpu->register_a = data;
             cpu->register_x = data;
@@ -1057,11 +1095,11 @@ bool cycle(CPU *cpu) {
         }
     }
 
-    bus_tick(cpu->bus, op_code.cycles);
+    res.render = bus_tick(cpu->bus, op_code.cycles);
 
     if (program_counter_state == cpu->program_counter) {
         cpu->program_counter += (uint16_t)(op_code.len - 1);
     }
 
-    return true;
+    return res;
 }

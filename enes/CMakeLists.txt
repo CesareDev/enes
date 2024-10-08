@@ -14,6 +14,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ppu/status.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/render/frame.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/render/palette.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/render/render.c
 )
 
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dep/include)

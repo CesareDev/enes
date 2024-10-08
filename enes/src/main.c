@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "render/frame.h"
 #include "render/palette.h"
+#include "render/render.h"
 
 void show_tile(Frame* frame, uint8_t* chr_rom, uint64_t bank, uint64_t tile_n) {
     if (bank > 1) abort();
@@ -71,28 +72,30 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(60);
 
     CPU cpu;
-    Bus bus;
     PPU ppu;
+    Bus bus;
     RomResult result = load_rom("../../../enes/res/pacman.nes");
+    Frame frame;
 
     if (!result.valid) {
         CloseWindow();
         return 0;
     }
 
-    //init(&cpu, &ppu, &bus, &result.rom);
-
-    Frame frame;
-    show_tile_bank(&frame, result.rom.chr_rom, 1);
+    init(&cpu, &ppu, &bus, &result.rom);
 
     Image image = GenImageColor(256, 240, BLACK);
     ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
     Texture2D texture_id = LoadTextureFromImage(image);
-    UpdateTexture(texture_id, frame.data);
 
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose()){
+        CycleRes result = cycle(&cpu);
+        if (!result.cycle_is_valid) break;
+        if (result.render) {
+            render(&ppu, &frame);
+            UpdateTexture(texture_id, frame.data);
+        }
         BeginDrawing();
-        ClearBackground(RED);
         DrawTexturePro(
             texture_id, 
             (Rectangle){0, 0, 256, 240}, 
