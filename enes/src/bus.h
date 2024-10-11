@@ -18,10 +18,11 @@ typedef struct {
     PPU* ppu;
 
     uint64_t cycles;
+    void (*callback)();
 } Bus;
 
-void init_bus(Bus* bus, PPU* ppu, Rom* rom);
-bool bus_tick(Bus* bus, uint8_t cycles);
+void init_bus(Bus* bus, PPU* ppu, Rom* rom, void (*callback)());
+void bus_tick(Bus* bus, uint8_t cycles);
 NmiInterrupt poll_nmi_status(Bus* bus);
 
 uint8_t bus_mem_read(Bus* bus, uint16_t addr);

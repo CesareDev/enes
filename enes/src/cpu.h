@@ -43,19 +43,15 @@ typedef struct {
     Bus* bus;
 } CPU;
 
-typedef struct {
-    bool cycle_is_valid;
-    bool render;
-} CycleRes;
-
 void mem_write(CPU* cpu, uint16_t addr, uint8_t data);
 uint8_t mem_read(CPU* cpu, uint16_t addr);
 
-void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom);
+void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom, void (*bus_callback)());
 
 void load(CPU* cpu, uint8_t* program, uint16_t size);
-CycleRes cycle(CPU* cpu);
+bool cycle(CPU* cpu);
 void reset(CPU* cpu);
 void load_and_reset(CPU* cpu, uint8_t* program, uint16_t size);
+void run(CPU* cpu, bool condition);
 
 #endif // !CPU_H

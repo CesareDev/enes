@@ -66,41 +66,44 @@ void show_tile_bank(Frame* frame, uint8_t* chr_rom, uint64_t bank) {
     }
 }
 
+CPU cpu;
+PPU ppu;
+Bus bus;
+Frame frame;
+Texture2D texture_id;
+
+void bus_callback() {
+    render(&ppu, &frame);
+    UpdateTexture(texture_id, frame.data);
+}
+
 int main(int argc, char* argv[]) {
 
     InitWindow(256 * 3, 240 * 3, "Pacman");
     //SetTargetFPS(60);
 
-    CPU cpu;
-    PPU ppu;
-    Bus bus;
-    RomResult result = load_rom("../../../enes/res/pacman.nes");
-    Frame frame;
-
+    RomResult result = load_rom("../../../enes/res/Alter_Ego.nes");
     if (!result.valid) {
         CloseWindow();
         return 0;
     }
 
-    init(&cpu, &ppu, &bus, &result.rom);
+    init(&cpu, &ppu, &bus, &result.rom, bus_callback);
+    init_frame(&frame);
 
     Image image = GenImageColor(256, 240, BLACK);
     ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-    Texture2D texture_id = LoadTextureFromImage(image);
+    texture_id = LoadTextureFromImage(image);
 
-    while (!WindowShouldClose()){
-        CycleRes result = cycle(&cpu);
-        if (!result.cycle_is_valid) break;
-        if (result.render) {
-            render(&ppu, &frame);
-            UpdateTexture(texture_id, frame.data);
-        }
+    while (!WindowShouldClose()) {
+        if (!cycle(&cpu)) break;
         BeginDrawing();
         DrawTexturePro(
             texture_id, 
-            (Rectangle){0, 0, 256, 240}, 
-            (Rectangle){0, 0, 256 * 3, 240 * 3}, 
-            (Vector2){ 0.f, 0.f }, 0.f, 
+            (Rectangle){ 0.f, 0.f, 256.f, 240.f }, 
+            (Rectangle){ 0.f, 0.f, 256.f * 3.f, 240.f * 3.f }, 
+            (Vector2){ 0.f, 0.f }, 
+            0.f, 
             WHITE
         );
         EndDrawing();
