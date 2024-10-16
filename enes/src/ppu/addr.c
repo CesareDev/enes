@@ -12,7 +12,7 @@ void set_addr_reg(AddrRegister* addr_reg, uint16_t data) {
 }
 
 uint16_t get_addr_reg(AddrRegister* addr_reg) {
-    return (uint16_t)(addr_reg->value[0] << 8) | (uint16_t)addr_reg->value[1];
+    return ((uint16_t)addr_reg->value[0] << 8) | (uint16_t)addr_reg->value[1];
 }
 
 void update_addr_reg(AddrRegister* addr_reg, uint8_t data) {

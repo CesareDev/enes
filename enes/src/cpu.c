@@ -41,7 +41,7 @@ void update_zero_and_negative_flags(CPU* cpu, uint8_t result) {
         remove(&cpu->status, ZERO);
     }
 
-    if ((result & 0b10000000) != 0) {
+    if ((result >> 7) == 1) {
         insert(&cpu->status, NEGATIV);
     } else {
         remove(&cpu->status, NEGATIV);
@@ -209,10 +209,10 @@ void load_and_reset(CPU *cpu, uint8_t *program, uint16_t size) {
     reset(cpu);
 }
 
-void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom) {
+void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom, void (*bus_callback)()) {
     cpu->bus = bus;
     populate_op_index();
-    init_bus(bus, ppu, rom);
+    init_bus(bus, ppu, rom, bus_callback);
     reset(cpu);
 }
 
@@ -516,8 +516,12 @@ void compare(CPU* cpu, AddressingMode mode, uint8_t compare_with) {
 
 void branch(CPU* cpu, bool condition) {
     if (condition) {
-        int8_t jump = mem_read(cpu, cpu->program_counter);
+        bus_tick(cpu->bus, 1);
+        int8_t jump = (int8_t)mem_read(cpu, cpu->program_counter);
         uint16_t jump_addr = cpu->program_counter + 1 + (uint16_t)jump;
+        if (((cpu->program_counter + 1) & 0xff00) != (jump_addr & 0xff00)) {
+            bus_tick(cpu->bus, 1);
+        }
         cpu->program_counter = jump_addr;
     }
 }
@@ -533,9 +537,7 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
     cpu->program_counter = mem_read_uint16(cpu, interrupt.vector_addr);
 }
 
- CycleRes cycle(CPU *cpu) {
-
-    CycleRes res = { true, false };
+bool cycle(CPU *cpu) {
 
     NmiInterrupt nmi = poll_nmi_status(cpu->bus);
     if (nmi.is_valid) {
@@ -563,7 +565,7 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
 
         case 0xe8: inx(cpu); break;
 
-        case 0x00: res.cycle_is_valid = false; return res;
+        case 0x00: return false;
 
         case 0xd8: remove(&cpu->status, DECIMAL_MODE); break;
         case 0x58: remove(&cpu->status, INTERRUPT_DISABLE); break;
@@ -877,7 +879,7 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
             AbsAddrRes res = get_operand_address(cpu, op_code.mode);
             uint8_t data = mem_read(cpu, res.addr);
             uint8_t x_and_a = cpu->register_x & cpu->register_a;
-            uint8_t result = x_and_a + data;
+            uint8_t result = x_and_a - data;
             if (data <= x_and_a) {
                 insert(&cpu->status, CARRY);
             }
@@ -956,6 +958,9 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
         case 0xfc: {
             AbsAddrRes res = get_operand_address(cpu, op_code.mode);
             uint8_t data = mem_read(cpu, res.addr);
+            if (res.page_cross) {
+                bus_tick(cpu->bus, 1);
+            }
             break;
         }
 
@@ -1095,11 +1100,17 @@ void interrupt(CPU* cpu, Interrupt interrupt) {
         }
     }
 
-    res.render = bus_tick(cpu->bus, op_code.cycles);
+    bus_tick(cpu->bus, op_code.cycles);
 
     if (program_counter_state == cpu->program_counter) {
         cpu->program_counter += (uint16_t)(op_code.len - 1);
     }
 
-    return res;
+    return true;
+}
+
+void run(CPU* cpu, bool condition) {
+    while (condition) {
+        if (!cycle(cpu)) break;
+    }
 }

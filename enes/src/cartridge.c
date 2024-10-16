@@ -33,9 +33,14 @@ RomResult load_rom(const char* name) {
     uint8_t four_screen = (raw[6] & 0b1000) != 0;
     uint8_t vertical_mirroring = (raw[6] & 0b1) != 0;
     Mirroring screen_mirroring;
-    if (four_screen) screen_mirroring = FOUR_SCREEN;
-    if (!four_screen && vertical_mirroring) screen_mirroring = VERTICAL;
-    if (!four_screen && !vertical_mirroring) screen_mirroring = HORIZONTAL;
+
+    if (four_screen) {
+        screen_mirroring = FOUR_SCREEN;
+    } else if (!four_screen && vertical_mirroring) {
+        screen_mirroring = VERTICAL;
+    } else if (!four_screen && !vertical_mirroring) {
+        screen_mirroring = HORIZONTAL;
+    }
 
     uint64_t prg_rom_size = (uint64_t)raw[4] * PRG_ROM_PAGE_SIZE;
     uint64_t chr_rom_size = (uint64_t)raw[5] * CHR_ROM_PAGE_SIZE;
@@ -43,7 +48,9 @@ RomResult load_rom(const char* name) {
     uint8_t skip_trainer = (raw[6] & 0b100) != 0;
 
     uint64_t prg_rom_start = 16;
-    if (skip_trainer) prg_rom_start += 512;
+    if (skip_trainer) {
+        prg_rom_start += 512;
+    }
     uint64_t chr_rom_start = prg_rom_start + prg_rom_size;
 
     RomResult res;

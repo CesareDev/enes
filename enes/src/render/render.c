@@ -4,7 +4,7 @@
 #include "palette.h"
 
 Palette bg_palette(PPU* ppu, uint64_t tile_column, uint64_t tile_row) {
-    uint64_t attr_table_idx = tile_row / 4 * 8 + tile_column / 4;
+    uint64_t attr_table_idx = (tile_row / 4) * 8 + tile_column / 4;
     uint8_t attr_byte = ppu->v_ram[0x3c0 + attr_table_idx];
     uint8_t palette_idx = 0;
     uint64_t col = (tile_column % 4) / 2;
@@ -85,13 +85,12 @@ void render(PPU* ppu, Frame* frame) {
                 lower = lower >> 1;
                 Vec3 rgb;
                 switch (value) {
-                    case 0: break;
+                    case 0: continue;
                     case 1: rgb = SYSTEM_PALETTE[s_palette.palette_1]; break;
                     case 2: rgb = SYSTEM_PALETTE[s_palette.palette_2]; break;
                     case 3: rgb = SYSTEM_PALETTE[s_palette.palette_3]; break;
                     default: abort();
                 }
-                if (value == 0) continue;
                 if (!flip_horizontal && !flip_vertical) {
                     set_pixel(frame, tile_x + x, tile_y + y, rgb);
                 } else if (flip_horizontal && !flip_vertical) {

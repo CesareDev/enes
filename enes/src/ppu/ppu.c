@@ -19,6 +19,9 @@ void init_ppu(PPU* ppu, uint8_t* chr_rom, Mirroring mirroring) {
     init_scroll_reg(&ppu->scroll);
     init_addr_reg(&ppu->addr);
 
+    ppu->cycles = 0;
+    ppu->scanline = 0;
+
     ppu->oam_addr = 0;
     ppu->internal_data_buf = 0;
     ppu->nmi_interrupt.value = 0;
@@ -60,7 +63,7 @@ uint8_t read_oam_data(PPU* ppu) {
 }
 
 void write_to_scroll(PPU* ppu, uint8_t value) {
-    write_to_scroll(ppu, value);
+    write_scroll_reg(&ppu->scroll, value);
 }
 
 void write_to_ppu_addr(PPU* ppu, uint8_t value) {
@@ -143,13 +146,11 @@ bool ppu_tick(PPU* ppu, uint8_t cycles) {
         ppu->cycles = ppu->cycles - 341;
         ppu->scanline += 1;
         if (ppu->scanline == 241) {
+            set_vblank_status(&ppu->status, true);
+            set_sprite_zero_hit(&ppu->status, false);
             if (generate_vblank_nmi(ppu->ctrl)) {
-                set_vblank_status(&ppu->status, true);
-                set_sprite_zero_hit(&ppu->status, false);
-                if (generate_vblank_nmi(ppu->ctrl)) {
-                    ppu->nmi_interrupt.value = 1;
-                    ppu->nmi_interrupt.is_valid = true;
-                }
+                ppu->nmi_interrupt.value = 1;
+                ppu->nmi_interrupt.is_valid = true;
             }
         }
         if (ppu->scanline >= 262) {

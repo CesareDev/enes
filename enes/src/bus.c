@@ -1,7 +1,7 @@
 #include "bus.h"
 #include <stdlib.h>
 
-void init_bus(Bus* bus, PPU* ppu, Rom* rom) {
+void init_bus(Bus* bus, PPU* ppu, Rom* rom, void (*callback)()) {
     for (uint16_t i = 0; i < CPU_VRAM; i++) {
         bus->cpu_vram[i] = 0;
     }
@@ -9,11 +9,15 @@ void init_bus(Bus* bus, PPU* ppu, Rom* rom) {
     bus->ppu = ppu;
     bus->rom = rom;
     bus->cycles = 0;
+    bus->callback = callback;
 }
 
-bool bus_tick(Bus* bus, uint8_t cycles) {
+void bus_tick(Bus* bus, uint8_t cycles) {
     bus->cycles += (uint64_t)cycles;
-    return ppu_tick(bus->ppu, cycles * 3);
+    bool new_frame = ppu_tick(bus->ppu, cycles * 3);
+    if (new_frame) {
+        bus->callback();
+    }
 }
 
 NmiInterrupt poll_nmi_status(Bus* bus) {
@@ -69,7 +73,7 @@ void bus_mem_write(Bus* bus, uint16_t addr, uint8_t data) {
         write_to_data(bus->ppu, data);
     } else if (addr >= 0x2008 && addr <= PPU_REGISTERS_MIRRORS_END) {
         uint16_t mirror_down_address = addr & 0b0010000000000111;
-        bus_mem_write(bus, addr, data);
+        bus_mem_write(bus, mirror_down_address, data);
     } else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015) {
         //Ignore APU
     } else if (addr == 0x4014) {

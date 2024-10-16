@@ -7,7 +7,7 @@ void init_scroll_reg(ScrollRegister* scroll_register) {
 }
 
 void write_scroll_reg(ScrollRegister* scroll_register, uint8_t data) {
-    if (scroll_register->latch) {
+    if (!scroll_register->latch) {
         scroll_register->scroll_x = data;
     } else {
         scroll_register->scroll_y = data;
