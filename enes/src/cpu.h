@@ -46,7 +46,7 @@ typedef struct {
 void mem_write(CPU* cpu, uint16_t addr, uint8_t data);
 uint8_t mem_read(CPU* cpu, uint16_t addr);
 
-void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom, void (*bus_callback)());
+void init_cpu(CPU* cpu, Bus* bus);
 
 void load(CPU* cpu, uint8_t* program, uint16_t size);
 bool cycle(CPU* cpu);

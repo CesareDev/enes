@@ -1,15 +1,15 @@
 #include "bus.h"
 #include <stdlib.h>
 
-void init_bus(Bus* bus, PPU* ppu, Rom* rom, void (*callback)()) {
+void init_bus(Bus* bus, PPU* ppu, Rom* rom, Joypad* joypad, void (*callback)()) {
     for (uint16_t i = 0; i < CPU_VRAM; i++) {
         bus->cpu_vram[i] = 0;
     }
-    init_ppu(ppu, rom->chr_rom, rom->screen_mirroring);
     bus->ppu = ppu;
     bus->rom = rom;
-    bus->cycles = 0;
+    bus->joypad1 = joypad;
     bus->callback = callback;
+    bus->cycles = 0;
 }
 
 void bus_tick(Bus* bus, uint8_t cycles) {
@@ -39,7 +39,7 @@ uint8_t bus_mem_read(Bus* bus, uint16_t addr) {
     } else if (addr >= 0x4000 && addr <= 0x4015) {
         return 0;
     } else if (addr == 0x4016) {
-        return 0;
+        return joypad_read(bus->joypad1);
     } else if (addr == 0x4017) {
         return 0;
     } else if (addr >= 0x2008 && addr <= PPU_REGISTERS_MIRRORS_END) {
@@ -87,7 +87,7 @@ void bus_mem_write(Bus* bus, uint16_t addr, uint8_t data) {
         // let add_cycles: u16 = if self.cycles % 2 == 1 { 514 } else { 513 };
         // self.tick(add_cycles); //todo this will cause weird effects as PPU will have 513/514 * 3 ticks
     } else if (addr == 0x4016) {
-        //Ignore Joypad 1
+        joypad_write(bus->joypad1, data);
     } else if (addr == 0x4017) {
         //Ignore Joypad 2
     } else if (addr >= 0x8000 && addr <= 0xffff) {

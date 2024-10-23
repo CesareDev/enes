@@ -6,6 +6,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/op_code.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/bus.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cartridge.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/joypad.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ppu/ppu.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ppu/addr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ppu/control.c

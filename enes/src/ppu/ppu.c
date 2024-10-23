@@ -140,9 +140,18 @@ uint16_t mirror_vram_addr(PPU* ppu, uint16_t addr) {
     return vram_index;
 }
 
+bool is_sprite_0_hit(PPU* ppu, uint64_t cycle) {
+    uint64_t y = (uint64_t)ppu->oam_data[0];
+    uint64_t x = (uint64_t)ppu->oam_data[3];
+    return (y == (uint64_t)ppu->scanline) && x <= cycle && show_sprites(ppu->mask);
+}
+
 bool ppu_tick(PPU* ppu, uint8_t cycles) {
     ppu->cycles += (uint64_t)cycles;
     if (ppu->cycles >= 341) {
+        if (is_sprite_0_hit(ppu, ppu->cycles)) {
+            set_sprite_zero_hit(&ppu->status, true);
+        }
         ppu->cycles = ppu->cycles - 341;
         ppu->scanline += 1;
         if (ppu->scanline == 241) {

@@ -209,10 +209,9 @@ void load_and_reset(CPU *cpu, uint8_t *program, uint16_t size) {
     reset(cpu);
 }
 
-void init(CPU* cpu, PPU* ppu, Bus* bus, Rom* rom, void (*bus_callback)()) {
+void init_cpu(CPU* cpu, Bus* bus) {
     cpu->bus = bus;
     populate_op_index();
-    init_bus(bus, ppu, rom, bus_callback);
     reset(cpu);
 }
 

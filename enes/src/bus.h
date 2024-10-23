@@ -5,6 +5,7 @@
 
 #include "cartridge.h"
 #include "ppu/ppu.h"
+#include "joypad.h"
 
 #define CPU_VRAM 2048
 #define RAM 0x0000 
@@ -16,12 +17,13 @@ typedef struct {
     uint8_t cpu_vram[CPU_VRAM];
     Rom* rom;
     PPU* ppu;
+    Joypad* joypad1;
 
     uint64_t cycles;
     void (*callback)();
 } Bus;
 
-void init_bus(Bus* bus, PPU* ppu, Rom* rom, void (*callback)());
+void init_bus(Bus* bus, PPU* ppu, Rom* rom, Joypad* joypad, void (*callback)());
 void bus_tick(Bus* bus, uint8_t cycles);
 NmiInterrupt poll_nmi_status(Bus* bus);
 
